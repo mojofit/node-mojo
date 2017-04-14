@@ -66,7 +66,7 @@
   $(function () {
     var socket = io();
     $('form').submit(function () {
-      socket.emit('message_request', {type: 'message_request', message: $('#m').val()});
+      socket.emit('message_request', {type: 'message_request', from: 'ankush@index.html', message: $('#m').val()});
       $('#m').val('');
       return false;
     });

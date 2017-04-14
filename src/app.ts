@@ -6,8 +6,7 @@ import * as compression from "compression";
 import * as path from "path";
 import {Server} from "http";
 import * as winston from "winston";
-
-import HeroRouter from "./routes/hero_router";
+import MessageController from "./controllers/message_controller";
 
 class App {
   public express: express.Application;
@@ -23,7 +22,7 @@ class App {
     this.initSocket(server);
   }
 
-  private middleware(): void {
+  private middleware() {
     this.express.use(cors());
     this.express.use(compression());
     this.express.use(logger('dev'));
@@ -34,31 +33,25 @@ class App {
   private initSocket(server) {
     const io = require('socket.io')(server);
     io.on('connection', socket => {
-      console.log('a user connected');
-      socket.on('message_request', message => {
-        console.log('got a message - ' + JSON.stringify(message));
-        socket.emit('message_response', "hey dude");
+      let flag: boolean = true;
+      winston.info('user connected -', socket.id);
+      socket.on('message_request', chatMessage => {
+        let message_response = MessageController.processMessage(chatMessage);
+        socket.emit('message_response', message_response);
+        if (flag) {
+          winston.info(socket.id, '-', chatMessage.from);
+          flag = false;
+        }
       });
-      socket.on('disconnect', function () {
-        console.log('user disconnected');
-      });
+      socket.on('disconnect', () => winston.info('user disconnected -', socket.id));
     });
-
   }
 
-  private routes(): void {
+  //TODO: for testing only
+  private routes() {
     this.express.get('/', (req, res) => {
       res.sendFile(path.join(__dirname + '/../index.html'));
     });
-
-    let router = express.Router();
-    router.get('/hello', (req, res, next) => {
-      res.json({
-        message: 'Hello World!'
-      });
-    });
-    this.express.use('/', router);
-    this.express.use('/api/v1/heroes', HeroRouter);
   }
 
   private errorHandler() {
