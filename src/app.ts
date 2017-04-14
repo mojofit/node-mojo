@@ -1,37 +1,58 @@
 import * as express from "express";
 import * as logger from "morgan";
 import * as bodyParser from "body-parser";
+import * as cors from "cors";
+import * as compression from "compression";
+import * as path from "path";
+import {Server} from "http";
+import * as winston from "winston";
 
 import HeroRouter from "./routes/hero_router";
 
-// Creates and configures an ExpressJS web server.
 class App {
-
-  // ref to Express instance
   public express: express.Application;
 
-  //Run configuration methods on the Express instance.
   constructor() {
     this.express = express();
-    this.middleware();
-    this.routes();
   }
 
-  // Configure Express middleware.
+  init(server: Server) {
+    this.middleware();
+    this.routes();
+    this.errorHandler();
+    this.initSocket(server);
+  }
+
   private middleware(): void {
+    this.express.use(cors());
+    this.express.use(compression());
     this.express.use(logger('dev'));
     this.express.use(bodyParser.json());
     this.express.use(bodyParser.urlencoded({extended: false}));
   }
 
-  // Configure API endpoints.
+  private initSocket(server) {
+    const io = require('socket.io')(server);
+    io.on('connection', socket => {
+      console.log('a user connected');
+      socket.on('message_request', message => {
+        console.log('got a message - ' + JSON.stringify(message));
+        socket.emit('message_response', "hey dude");
+      });
+      socket.on('disconnect', function () {
+        console.log('user disconnected');
+      });
+    });
+
+  }
+
   private routes(): void {
-    /* This is just to get up and running, and to make sure what we've got is
-     * working so far. This function will change when we start to add more
-     * API endpoints */
+    this.express.get('/', (req, res) => {
+      res.sendFile(path.join(__dirname + '/../index.html'));
+    });
+
     let router = express.Router();
-    // placeholder route handler
-    router.get('/', (req, res, next) => {
+    router.get('/hello', (req, res, next) => {
       res.json({
         message: 'Hello World!'
       });
@@ -40,6 +61,21 @@ class App {
     this.express.use('/api/v1/heroes', HeroRouter);
   }
 
+  private errorHandler() {
+    this.express.use((req, res, next) => {
+      let err: any = new Error('Not Found');
+      err.status = 404;
+      next(err);
+    });
+
+    this.express.use((err, req, res, next) => {
+      res.status(err.status || 500);
+      res.json({
+        success: false,
+        error: err.message
+      });
+    });
+  }
 }
 
-export default new App().express;
+export default new App();

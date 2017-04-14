@@ -71,7 +71,7 @@
       return false;
     });
     socket.on('message_response', function (msg) {
-      $('#messages').append($('<li>').text(msg.message));
+      $('#messages').append($('<li>').text(msg));
       window.scrollTo(0, document.body.scrollHeight);
     });
   });
