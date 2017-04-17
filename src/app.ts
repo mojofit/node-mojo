@@ -6,7 +6,7 @@ import * as compression from "compression";
 import * as path from "path";
 import {Server} from "http";
 import * as winston from "winston";
-import MessageController from "./controllers/message_controller";
+import {MessageController} from "./controllers";
 
 class App {
   public express: express.Application;
